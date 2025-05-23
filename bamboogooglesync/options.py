@@ -31,3 +31,11 @@ google_credentials = click.option(
     required=True,
     type=click.Path(dir_okay=False, exists=True),
 )
+
+dry_run = click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="If set, the script will only print actions without executing them.",
+    show_default=True,
+)

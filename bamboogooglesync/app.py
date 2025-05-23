@@ -22,11 +22,13 @@ def cli(*args, **kwargs):
 @bamboo_api_key
 @google_admin
 @google_credentials
+@dry_run
 def update(
     bamboo_subdomain,
     bamboo_api_key,
     google_admin,
     google_credentials,
+    dry_run,
 ):
     b = BambooSession(bamboo_subdomain, bamboo_api_key)
     g = create_directory_service(google_admin, google_credentials)
@@ -63,12 +65,15 @@ def update(
                     }
                 ],
                 "externalIds": [{"value": employee["id"], "type": "organization"}],
-                "orgUnitPath": f'/{employee["department"]}',
+                "orgUnitPath": f'/{employee["department"]}' if employee["department"] else "/",
             },
         }
         try:
-            g.users().update(**update_kwargs).execute()
-            click.echo({"type": "update_user", **update_kwargs})
+            if dry_run:
+                click.echo({"type": "dry_run_update_user", **update_kwargs})
+            else:
+                g.users().update(**update_kwargs).execute()
+                click.echo({"type": "update_user", **update_kwargs})
         except HttpError as e:
             echo_http_error(e, **update_kwargs)
             continue
@@ -79,12 +84,14 @@ def update(
 @google_admin
 @google_credentials
 @click.argument('employee-id')
+@dry_run
 def update_employee(
     bamboo_subdomain,
     bamboo_api_key,
     google_admin,
     google_credentials,
-    employee_id
+    employee_id,
+    dry_run,
 ):
     b = BambooSession(bamboo_subdomain, bamboo_api_key)
     g = create_directory_service(google_admin, google_credentials)
@@ -142,8 +149,11 @@ def update_employee(
         },
     }
     try:
-        g.users().update(**update_kwargs).execute()
-        click.echo({"type": "update_user", **update_kwargs})
+        if dry_run:
+            click.echo({"type": "dry_run_update_user", **update_kwargs})
+        else:
+            g.users().update(**update_kwargs).execute()
+            click.echo({"type": "update_user", **update_kwargs})
     except HttpError as e:
         echo_http_error(e, **update_kwargs)
 
@@ -156,11 +166,12 @@ def update_employee(
 @bamboo_api_key
 @google_admin
 @google_credentials
+@dry_run
 def sync(**kwargs):
     _sync(**kwargs)
 
 
-def _sync(bamboo_subdomain, bamboo_api_key, google_admin, google_credentials):
+def _sync(bamboo_subdomain, bamboo_api_key, google_admin, google_credentials, dry_run):
     b = BambooSession(bamboo_subdomain, bamboo_api_key)
     g = create_directory_service(google_admin, google_credentials)
 
@@ -220,12 +231,15 @@ def _sync(bamboo_subdomain, bamboo_api_key, google_admin, google_credentials):
                     }
                 ],
                 "externalIds": [{"value": employee["id"], "type": "organization"}],
-                "orgUnitPath": f'/{employee["department"]}',
+                "orgUnitPath": f'/{employee["department"]}' if employee["department"] else "/",
             }
         }
         try:
-            g.users().insert(**insert_kwargs).execute()
-            click.echo({"type": "insert_user", **insert_kwargs})
+            if dry_run:
+                click.echo({"type": "dry_run_insert_user", **insert_kwargs})
+            else:
+                g.users().insert(**insert_kwargs).execute()
+                click.echo({"type": "insert_user", **insert_kwargs})
         except HttpError as e:
             echo_http_error(e, **insert_kwargs)
             continue
@@ -266,6 +280,14 @@ def _sync(bamboo_subdomain, bamboo_api_key, google_admin, google_credentials):
         
         # disable unsuspending
         if user["suspended"]:
+            if dry_run:
+                click.echo(
+                    {
+                        "type": "dry_run_skip_unsuspend_user",
+                        "userKey": user["id"],
+                        "reason": "User is currently suspended, and unsuspending is disabled.",
+                    }
+                )
             continue
 
         update_kwargs = {
@@ -297,12 +319,15 @@ def _sync(bamboo_subdomain, bamboo_api_key, google_admin, google_credentials):
                         "department": employee["department"],
                     }
                 ],
-                "orgUnitPath": f'/{employee["department"]}',
+                "orgUnitPath": f'/{employee["department"]}' if employee["department"] else "/",
             },
         }
         try:
-            g.users().update(**update_kwargs).execute()
-            click.echo({"type": "update_user", **update_kwargs})
+            if dry_run:
+                click.echo({"type": "dry_run_update_user", **update_kwargs})
+            else:
+                g.users().update(**update_kwargs).execute()
+                click.echo({"type": "update_user", **update_kwargs})
         except HttpError as e:
             echo_http_error(e, **update_kwargs)
             continue
@@ -320,8 +345,11 @@ def _sync(bamboo_subdomain, bamboo_api_key, google_admin, google_credentials):
 
         update_kwargs = {"userKey": user["id"], "body": {"suspended": True}}
         try:
-            g.users().update(**update_kwargs).execute()
-            click.echo({"type": "update_user", **update_kwargs})
+            if dry_run:
+                click.echo({"type": "dry_run_suspend_user", **update_kwargs})
+            else:
+                g.users().update(**update_kwargs).execute()
+                click.echo({"type": "update_user", "action": "suspend", **update_kwargs})
         except HttpError as e:
             echo_http_error(e, **update_kwargs)
 
@@ -361,11 +389,17 @@ class NotFoundError(Exception):
 
 
 def lambda_handler(event, context):
+    # Dry run for lambda needs to be configured via environment variable or event payload.
+    # For now, assuming lambda always runs in non-dry-run mode.
+    # If dry_run is needed for lambda, this needs adjustment.
+    is_lambda_dry_run = os.environ.get("LAMBDA_DRY_RUN", "false").lower() == "true"
+
     _sync(
         get_secret(os.environ["BAMBOO_SUBDOMAIN"]),
         get_secret(os.environ["BAMBOO_API_KEY"]),
         get_secret(os.environ["GOOGLE_ADMIN"]),
         json.loads(get_secret(os.environ["GOOGLE_CREDENTIALS"])),
+        dry_run=is_lambda_dry_run,  # Pass dry_run status to _sync
     )
 
 
