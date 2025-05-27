@@ -49,6 +49,7 @@ def update(
                     "jobTitle",
                     "supervisorEmail",
                     "department",
+                    "employmentType",
                     "id"
                 ])
             },
@@ -131,6 +132,8 @@ def update_employee(
                     "jobTitle",
                     "supervisorEmail",
                     "department",
+                    "employmentType",
+                    "id"
                 ]
             )
         },
@@ -215,6 +218,8 @@ def _sync(bamboo_subdomain, bamboo_api_key, google_admin, google_credentials, dr
                         "jobTitle",
                         "supervisorEmail",
                         "department",
+                        "employmentType",
+                        "id"
                     ]
                 )
             },
@@ -280,6 +285,8 @@ def _sync(bamboo_subdomain, bamboo_api_key, google_admin, google_credentials, dr
                         "jobTitle",
                         "supervisorEmail",
                         "department",
+                        "employmentType",
+                        "id"
                     ]
                 )
             },
