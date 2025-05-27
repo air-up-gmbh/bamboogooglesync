@@ -87,7 +87,6 @@ def update(
                     }
                 ],
                 "externalIds": [{"value": employee["id"], "type": "organization"}],
-                "orgUnitPath": f'/{employee["department"]}' if employee["department"] else "/",
             },
         }
         try:
@@ -167,7 +166,6 @@ def update_employee(
                 }
             ],
             "externalIds": [{"value": employee["id"], "type": "organization"}],
-            "orgUnitPath": f'/{employee["department"]}' if employee["department"] else "/",
         },
     }
     try:
@@ -253,7 +251,7 @@ def _sync(bamboo_subdomain, bamboo_api_key, google_admin, google_credentials, dr
                     }
                 ],
                 "externalIds": [{"value": employee["id"], "type": "organization"}],
-                "orgUnitPath": f'/{employee["department"]}' if employee["department"] else "/",
+                "orgUnitPath": "/Employees",
             }
         }
         try:
@@ -341,7 +339,6 @@ def _sync(bamboo_subdomain, bamboo_api_key, google_admin, google_credentials, dr
                         "department": employee["department"],
                     }
                 ],
-                "orgUnitPath": f'/{employee["department"]}' if employee["department"] else "/",
             },
         }
         try:
