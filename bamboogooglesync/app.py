@@ -34,7 +34,29 @@ def update(
     g = create_directory_service(google_admin, google_credentials)
 
     directory = b.get("/employees/directory")
-    for employee in directory.get("employees"):
+    for employee in directory.get("employees", []):
+        # Get detailed employee information including status
+        employee_details = b.get(
+            f"/employees/{employee['id']}",
+            params={
+                "fields": ",".join([
+                    "workEmail",
+                    "preferredName",
+                    "firstName",
+                    "lastName",
+                    "status",
+                    "homeEmail",
+                    "jobTitle",
+                    "supervisorEmail",
+                    "department",
+                    "id"
+                ])
+            },
+        )
+        
+        # Merge the detailed info with directory info
+        employee.update(employee_details)
+        
         update_kwargs = {
             "userKey": employee["workEmail"],
             "body": {
